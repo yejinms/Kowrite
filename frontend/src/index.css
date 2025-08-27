@@ -1,6 +1,6 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Google Fonts - Noto Sans KR */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100;300;400;500;700;900&display=swap');
@@ -55,6 +55,50 @@ body {
   
   .print-break {
     page-break-before: always;
+  }
+}
+
+/* 인쇄용 스타일 */
+@media print {
+  body {
+    margin: 0;
+    padding: 0;
+    background: white !important;
+  }
+  
+  .bg-gray-100 {
+    background: white !important;
+  }
+  
+  .shadow-2xl {
+    box-shadow: none !important;
+  }
+  
+  .answer-line {
+    border-bottom: 1px solid #000 !important;
+  }
+  
+  /* 인쇄 시 불필요한 요소 숨김 */
+  button, .print-hide {
+    display: none !important;
+  }
+  
+  /* 학습지 내용만 인쇄 */
+  .worksheet-content {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  
+  /* A4 용지 크기 설정 */
+  @page {
+    size: A4;
+    margin: 1cm;
   }
 }
 

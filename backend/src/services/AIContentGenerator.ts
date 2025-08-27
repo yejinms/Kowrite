@@ -1,5 +1,4 @@
 import { OpenAI } from 'openai';
-import { Configuration } from 'openai';
 
 interface WorksheetContentRequest {
   category: string;

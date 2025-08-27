@@ -7,14 +7,14 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { createConnection } from 'typeorm';
 
-// 라우터 임포트
+// 환경 변수 로드
+dotenv.config();
+
+// 라우트 import
 import worksheetRoutes from './routes/worksheets';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import communityRoutes from './routes/community';
-
-// 환경변수 로드
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -24,7 +24,7 @@ app.use(helmet());
 
 // CORS 설정
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: process.env.FRONTEND_URL || 'http://localhost:3002',
   credentials: true
 }));
 
@@ -88,25 +88,31 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // 데이터베이스 연결 및 서버 시작
 const startServer = async () => {
   try {
-    // TypeORM 연결 설정
-    await createConnection({
-      type: 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432'),
-      username: process.env.DB_USERNAME || 'postgres',
-      password: process.env.DB_PASSWORD || 'password',
-      database: process.env.DB_NAME || 'kowrite',
-      entities: [__dirname + '/entities/*.ts'],
-      synchronize: process.env.NODE_ENV === 'development',
-      logging: process.env.NODE_ENV === 'development'
-    });
-
-    console.log('✅ 데이터베이스 연결 성공');
+    // TypeORM 연결 시도 (선택적)
+    try {
+      await createConnection({
+        type: 'postgres',
+        host: process.env.DB_HOST || 'localhost',
+        port: parseInt(process.env.DB_PORT || '5432'),
+        username: process.env.DB_USERNAME || 'postgres',
+        password: process.env.DB_PASSWORD || 'password',
+        database: process.env.DB_NAME || 'kowrite',
+        entities: [__dirname + '/entities/*.ts'],
+        synchronize: process.env.NODE_ENV === 'development',
+        logging: process.env.NODE_ENV === 'development'
+      });
+      console.log('✅ 데이터베이스 연결 성공');
+    } catch (dbError: any) {
+      console.log('⚠️ 데이터베이스 연결 실패 (메모리 모드로 실행):', dbError.message);
+      console.log('📝 실제 데이터는 메모리에 저장됩니다');
+    }
 
     app.listen(PORT, () => {
       console.log(`🚀 서버가 포트 ${PORT}에서 실행 중입니다`);
       console.log(`📚 Kowrite API 서버 준비 완료`);
       console.log(`🌍 환경: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔗 프론트엔드: http://localhost:3002`);
+      console.log(`🔗 백엔드 API: http://localhost:${PORT}`);
     });
 
   } catch (error) {

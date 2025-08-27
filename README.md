@@ -26,11 +26,40 @@ cd Kowrite
 # 의존성 설치
 npm install
 
+# 환경변수 설정
+cd frontend
+cp .env.example .env.local
+# .env.local 파일에서 VITE_OPENAI_API_KEY를 실제 API 키로 변경
+
 # 개발 서버 실행
 npm run dev
 
-# 브라우저에서 http://localhost:3000 접속
+# 브라우저에서 http://localhost:3002 접속
 ```
+
+### 🔐 환경변수 설정
+
+프로젝트를 실행하기 전에 다음 환경변수를 설정해야 합니다:
+
+1. **frontend/.env.local** 파일 생성:
+```bash
+# OpenAI API Configuration
+VITE_OPENAI_API_KEY=your_openai_api_key_here
+
+# Development Configuration
+VITE_API_BASE_URL=http://localhost:3001
+VITE_APP_ENV=development
+```
+
+2. **OpenAI API 키 발급**:
+   - [OpenAI Platform](https://platform.openai.com/)에서 계정 생성
+   - API 키 발급 및 복사
+   - `.env.local` 파일의 `VITE_OPENAI_API_KEY`에 붙여넣기
+
+⚠️ **보안 주의사항**: 
+- `.env.local` 파일은 절대 Git에 커밋하지 마세요
+- API 키를 공개 저장소에 노출하지 마세요
+- 프로덕션 환경에서는 서버 사이드에서 API 키를 관리하세요
 
 ## 🏗️ 프로젝트 구조
 

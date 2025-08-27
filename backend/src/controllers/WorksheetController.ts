@@ -19,7 +19,7 @@ export class WorksheetController {
   public generateWorksheet = async (req: Request, res: Response) => {
     try {
       const { category, topic, difficulty, language, grade } = req.body;
-      const userId = req.user?.id;
+      const userId = (req as any).user?.id;
 
       console.log(`🎯 학습지 생성 시작: ${category} - ${topic} (${difficulty})`);
 
@@ -71,7 +71,7 @@ export class WorksheetController {
    */
   public getWorksheets = async (req: Request, res: Response) => {
     try {
-      const userId = req.user?.id;
+      const userId = (req as any).user?.id;
       const { page = 1, limit = 10, category, difficulty } = req.query;
 
       const worksheets = await this.worksheetService.getWorksheetsByUser(
@@ -101,18 +101,27 @@ export class WorksheetController {
   /**
    * 특정 학습지 조회
    */
-  public getWorksheet = async (req: Request, res: Response) => {
+  public getWorksheet = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const userId = req.user?.id;
+      const userId = (req as any).user?.id;
 
-      const worksheet = await this.worksheetService.getWorksheetById(id, userId);
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          message: '학습지 ID가 필요합니다.'
+        });
+        return;
+      }
+
+      const worksheet = await this.worksheetService.getWorksheetById(id);
 
       if (!worksheet) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: '학습지를 찾을 수 없습니다.'
         });
+        return;
       }
 
       res.json({
@@ -132,13 +141,21 @@ export class WorksheetController {
   /**
    * 학습지 업데이트
    */
-  public updateWorksheet = async (req: Request, res: Response) => {
+  public updateWorksheet = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
       const updateData = req.body;
-      const userId = req.user?.id;
+      const userId = (req as any).user?.id;
 
-      const worksheet = await this.worksheetService.updateWorksheet(id, userId, updateData);
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          message: '학습지 ID가 필요합니다.'
+        });
+        return;
+      }
+
+      const worksheet = await this.worksheetService.updateWorksheet(id, updateData);
 
       res.json({
         success: true,
@@ -158,12 +175,20 @@ export class WorksheetController {
   /**
    * 학습지 삭제
    */
-  public deleteWorksheet = async (req: Request, res: Response) => {
+  public deleteWorksheet = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const userId = req.user?.id;
+      const userId = (req as any).user?.id;
 
-      await this.worksheetService.deleteWorksheet(id, userId);
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          message: '학습지 ID가 필요합니다.'
+        });
+        return;
+      }
+
+      await this.worksheetService.deleteWorksheet(id);
 
       res.json({
         success: true,
@@ -182,16 +207,21 @@ export class WorksheetController {
   /**
    * 학습지 공유
    */
-  public shareWorksheet = async (req: Request, res: Response) => {
+  public shareWorksheet = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
       const { shareType, recipients } = req.body;
-      const userId = req.user?.id;
+      const userId = (req as any).user?.id;
 
-      const shareResult = await this.worksheetService.shareWorksheet(id, userId, {
-        shareType,
-        recipients
-      });
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          message: '학습지 ID가 필요합니다.'
+        });
+        return;
+      }
+
+      const shareResult = await this.worksheetService.shareWorksheet(id);
 
       res.json({
         success: true,
@@ -211,12 +241,20 @@ export class WorksheetController {
   /**
    * PDF 생성
    */
-  public generatePDF = async (req: Request, res: Response) => {
+  public generatePDF = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const userId = req.user?.id;
+      const userId = (req as any).user?.id;
 
-      const pdfBuffer = await this.worksheetService.generatePDF(id, userId);
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          message: '학습지 ID가 필요합니다.'
+        });
+        return;
+      }
+
+      const pdfBuffer = await this.worksheetService.generatePDF(id);
 
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="worksheet-${id}.pdf"`);
@@ -234,12 +272,20 @@ export class WorksheetController {
   /**
    * Word 문서 생성
    */
-  public generateWord = async (req: Request, res: Response) => {
+  public generateWord = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
-      const userId = req.user?.id;
+      const userId = (req as any).user?.id;
 
-      const wordBuffer = await this.worksheetService.generateWord(id, userId);
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          message: '학습지 ID가 필요합니다.'
+        });
+        return;
+      }
+
+      const wordBuffer = await this.worksheetService.generateWord(id);
 
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
       res.setHeader('Content-Disposition', `attachment; filename="worksheet-${id}.docx"`);
@@ -280,8 +326,8 @@ export class WorksheetController {
    */
   public getWorksheetStats = async (req: Request, res: Response) => {
     try {
-      const userId = req.user?.id;
-      const stats = await this.worksheetService.getWorksheetStats(userId);
+      const userId = (req as any).user?.id;
+      const stats = await this.worksheetService.getStats();
 
       res.json({
         success: true,
