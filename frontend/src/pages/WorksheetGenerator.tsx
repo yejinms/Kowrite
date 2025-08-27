@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { BookOpen, History, User, Music, Film, Loader2, Sparkles, ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
+import LoadingScreen from '../components/LoadingScreen';
 
 interface WorksheetForm {
   category: string;
@@ -48,11 +49,59 @@ const WorksheetGenerator: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedWorksheet, setGeneratedWorksheet] = useState<any>(null);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingStep, setLoadingStep] = useState('');
   const [showWorksheet, setShowWorksheet] = useState(false);
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<WorksheetForm>();
   const selectedCategory = watch('category');
   const selectedDifficulty = watch('difficulty');
+
+  // 40초 동안 연속적인 진행률 시뮬레이션
+  const simulateLoadingProgress = () => {
+    const totalDuration = 50000; // 10초 (개발용, 실제 배포 시 40000으로 변경)
+    const updateInterval = 100; // 100ms마다 업데이트
+    const startTime = Date.now();
+    
+    const steps = [
+      { progress: 15, message: '주제 분석 중...' },
+      { progress: 35, message: 'AI 모델 연결 중...' },
+      { progress: 55, message: '읽기 자료 생성 중...' },
+      { progress: 75, message: '어휘와 문제 만들기 중...' },
+      { progress: 90, message: '토론 주제와 요약 정리 중...' },
+      { progress: 99, message: '최종 검토 중...' }
+    ];
+    
+    let currentStepIndex = 0;
+    
+    const updateProgress = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min((elapsed / totalDuration) * 99, 99); // 최대 99%까지만
+      
+      setLoadingProgress(Math.round(progress));
+      
+      // 단계별 메시지 업데이트
+      if (currentStepIndex < steps.length && progress >= steps[currentStepIndex].progress) {
+        setLoadingStep(steps[currentStepIndex].message);
+        currentStepIndex++;
+      }
+      
+      // 99%에 도달하면 대기
+      if (progress >= 99) {
+        setLoadingProgress(99);
+        setLoadingStep('거의 완료! 잠시만 기다려주세요...');
+        return; // 더 이상 업데이트하지 않음
+      }
+      
+      // 다음 업데이트 예약
+      setTimeout(updateProgress, updateInterval);
+    };
+    
+    // 시작
+    setLoadingProgress(0);
+    setLoadingStep('시작 중...');
+    setTimeout(updateProgress, updateInterval);
+  };
 
   const totalSteps = 5;
 
@@ -80,17 +129,31 @@ const WorksheetGenerator: React.FC = () => {
       console.error('Error:', error);
       toast.error('학습지 생성 중 오류가 발생했습니다.');
     } finally {
-      setIsGenerating(false);
+      // API 완료 시 즉시 100%로 설정하고 새 페이지로 전환
+      setLoadingProgress(100);
+      setLoadingStep('완료!');
+      setTimeout(() => {
+        setIsGenerating(false);
+        setShowWorksheet(true);
+      }, 1000); // 1초 후 새 페이지로 전환
     }
   };
 
   const generateWorksheetWithAI = async (data: WorksheetForm) => {
-    const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+    const OPENAI_API_KEY = (import.meta as any).env.VITE_OPENAI_API_KEY;
     
     if (!OPENAI_API_KEY) {
       toast.error('API 키가 설정되지 않았습니다. 환경변수를 확인해주세요.');
       return;
     }
+
+    // 로딩 시작
+    setIsGenerating(true);
+    setLoadingProgress(0);
+    setLoadingStep('시작 중...');
+    
+    // 진행률 시뮬레이션 시작
+    simulateLoadingProgress();
     
     const prompt = `
 다음 주제로 한국 문화 학습지를 만들어주세요:
@@ -552,6 +615,14 @@ const WorksheetGenerator: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-8">
+      {/* 로딩 화면 */}
+      <LoadingScreen 
+        isVisible={isGenerating}
+        progress={loadingProgress}
+        currentStep={loadingStep}
+        onComplete={() => setIsGenerating(false)}
+      />
+      
       <div className="max-w-4xl mx-auto px-4">
         {/* 헤더 */}
         <div className="text-center mb-8">
