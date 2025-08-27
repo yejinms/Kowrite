@@ -57,9 +57,9 @@ const WorksheetGenerator: React.FC = () => {
   const selectedCategory = watch('category');
   const selectedDifficulty = watch('difficulty');
 
-  // 40초 동안 연속적인 진행률 시뮬레이션
+  // 20초 동안 연속적인 진행률 시뮬레이션
   const simulateLoadingProgress = () => {
-    const totalDuration = 50000; // 10초 (개발용, 실제 배포 시 40000으로 변경)
+    const totalDuration = 20000; // 20초
     const updateInterval = 100; // 100ms마다 업데이트
     const startTime = Date.now();
     
@@ -118,6 +118,7 @@ const WorksheetGenerator: React.FC = () => {
   };
 
   const onSubmit = async (data: WorksheetForm) => {
+    const startTime = Date.now();
     setIsGenerating(true);
     
     try {
@@ -129,13 +130,18 @@ const WorksheetGenerator: React.FC = () => {
       console.error('Error:', error);
       toast.error('학습지 생성 중 오류가 발생했습니다.');
     } finally {
-      // API 완료 시 즉시 100%로 설정하고 새 페이지로 전환
-      setLoadingProgress(100);
-      setLoadingStep('완료!');
+      // API 완료 시 최소 20초 대기 후 100%로 설정
+      const elapsed = Date.now() - startTime;
+      const remainingTime = Math.max(0, 20000 - elapsed); // 최소 20초 보장
+      
       setTimeout(() => {
-        setIsGenerating(false);
-        setShowWorksheet(true);
-      }, 1000); // 1초 후 새 페이지로 전환
+        setLoadingProgress(100);
+        setLoadingStep('완료!');
+        setTimeout(() => {
+          setIsGenerating(false);
+          setShowWorksheet(true);
+        }, 1000); // 1초 후 새 페이지로 전환
+      }, remainingTime);
     }
   };
 
