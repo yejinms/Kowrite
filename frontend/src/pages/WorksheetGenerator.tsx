@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { BookOpen, History, User, Music, Film, Loader2, Sparkles, ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingScreen from '../components/LoadingScreen';
+import CategorySpecificInput from '../components/CategorySpecificInput';
 
 interface WorksheetForm {
   category: string;
@@ -10,6 +11,28 @@ interface WorksheetForm {
   difficulty: string;
   grade: string;
   language: string;
+}
+
+interface CategoryInputData {
+  // 책 카테고리
+  title?: string;
+  author?: string;
+  
+  // 인물 카테고리
+  name?: string;
+  
+  // K-Pop 카테고리
+  artist?: string;
+  song?: string;
+  
+  // 드라마/영화 카테고리
+  // title 재사용
+  
+  // 역사 카테고리
+  event?: string;
+  
+  // 일반 주제
+  // topic 재사용
 }
 
 // interface WorksheetContent {
@@ -52,14 +75,38 @@ const WorksheetGenerator: React.FC = () => {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingStep, setLoadingStep] = useState('');
   const [showWorksheet, setShowWorksheet] = useState(false);
+  const [categoryInputData, setCategoryInputData] = useState<CategoryInputData>({});
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<WorksheetForm>();
   const selectedCategory = watch('category');
   const selectedDifficulty = watch('difficulty');
 
+  // 카테고리별 입력 데이터 처리
+  const handleCategoryInputChange = (data: CategoryInputData) => {
+    setCategoryInputData(data);
+  };
+
+  // 카테고리별 주제어 생성
+  const generateTopicFromCategoryData = (): string => {
+    switch (selectedCategory) {
+      case 'book':
+        return `${categoryInputData.title || ''} ${categoryInputData.author || ''}`.trim();
+      case 'person':
+        return categoryInputData.name || '';
+      case 'kpop':
+        return `${categoryInputData.artist || ''} ${categoryInputData.song || ''}`.trim();
+      case 'drama':
+        return categoryInputData.title || '';
+      case 'history':
+        return categoryInputData.event || '';
+      default:
+        return '';
+    }
+  };
+
   // 20초 동안 연속적인 진행률 시뮬레이션
   const simulateLoadingProgress = () => {
-    const totalDuration = 20000; // 20초
+    const totalDuration = 30000; // 30초
     const updateInterval = 100; // 100ms마다 업데이트
     const startTime = Date.now();
     
@@ -107,6 +154,15 @@ const WorksheetGenerator: React.FC = () => {
 
   const nextStep = () => {
     if (currentStep < totalSteps) {
+      // 2단계(주제 입력)에서 카테고리별 데이터 검증
+      if (currentStep === 1) {
+        // 카테고리가 선택되었는지만 확인
+        if (!selectedCategory) {
+          toast.error('카테고리를 선택해주세요.');
+          return;
+        }
+        // 입력 데이터는 나중에 검증하도록 수정
+      }
       setCurrentStep(currentStep + 1);
     }
   };
@@ -121,8 +177,19 @@ const WorksheetGenerator: React.FC = () => {
     const startTime = Date.now();
     setIsGenerating(true);
     
+    // 카테고리별 입력 데이터를 topic으로 변환
+    const topic = generateTopicFromCategoryData();
+    if (!topic) {
+      toast.error('주제 정보를 입력해주세요.');
+      setIsGenerating(false);
+      return;
+    }
+    
+    // data 객체에 topic 추가
+    const enrichedData = { ...data, topic };
+    
     try {
-      const worksheet = await generateWorksheetWithAI(data);
+      const worksheet = await generateWorksheetWithAI(enrichedData);
       setGeneratedWorksheet(worksheet);
       setShowWorksheet(true);
       toast.success('학습지가 성공적으로 생성되었습니다!');
@@ -130,9 +197,9 @@ const WorksheetGenerator: React.FC = () => {
       console.error('Error:', error);
       toast.error('학습지 생성 중 오류가 발생했습니다.');
     } finally {
-      // API 완료 시 최소 20초 대기 후 100%로 설정
+      // API 완료 시 최소 30초 대기 후 100%로 설정
       const elapsed = Date.now() - startTime;
-      const remainingTime = Math.max(0, 20000 - elapsed); // 최소 20초 보장
+      const remainingTime = Math.max(0, 30000 - elapsed); // 최소 30초 보장
       
       setTimeout(() => {
         setLoadingProgress(100);
@@ -330,22 +397,11 @@ const WorksheetGenerator: React.FC = () => {
       case 2:
         return (
           <div className="text-center">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6">✏️ 주제어 입력</h3>
-            <p className="text-gray-600 mb-8">구체적인 주제나 키워드를 입력해주세요</p>
-            <div className="max-w-md mx-auto">
-              <input
-                type="text"
-                placeholder="예: BTS 봄날, 이상한 변호사 우영우, 6.25 전쟁..."
-                {...register('topic', {
-                  required: '주제어를 입력해주세요',
-                  minLength: { value: 2, message: '최소 2자 이상 입력해주세요' }
-                })}
-                className="w-full px-6 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              {errors.topic && (
-                <p className="mt-3 text-sm text-red-600">{errors.topic.message}</p>
-              )}
-            </div>
+            <CategorySpecificInput
+              category={selectedCategory || ''}
+              onInputChange={handleCategoryInputChange}
+              currentData={categoryInputData}
+            />
           </div>
         );
 
@@ -422,7 +478,7 @@ const WorksheetGenerator: React.FC = () => {
                 </div>
                 <div>
                   <span className="font-semibold text-gray-700">주제:</span>
-                  <p className="text-gray-900">{watch('topic')}</p>
+                  <p className="text-gray-900">{generateTopicFromCategoryData() || '입력 중...'}</p>
                 </div>
                 <div>
                   <span className="font-semibold text-gray-700">난이도:</span>
